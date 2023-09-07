@@ -95,6 +95,8 @@ def array_to_point_cloud2(np_array, frame_id='base_link'):
         msg.point_step = 16
     if not rgb_flag and intensity_flag:
         msg.point_step = 14
+    if not rgb_flag and not intensity_flag:
+        msg.point_step = 12        
 
     msg.row_step = msg.point_step * msg.width
 
