@@ -25,18 +25,10 @@ This module contains two core functions:
 
 Currently supports:
 
-* `sensor_msgs.msg.PointCloud2` &harr; structured `np.array`:
+* `sensor_msgs.msg.PointCloud2` &harr; structured `dict`: # See PointCloud2 message type in ros2
 
    ```python
-   data = np.zeros(100, dtype=[
-     ('x', np.float32),
-     ('y', np.float32),
-     ('vectors', np.float32, (3,))
-   ])
-   data['x'] = np.arange(100)
-   data['y'] = data['x']*2
-   data['vectors'] = np.arange(100)[:,np.newaxis]
-
+   data = {"xyz": np.random.rand(100, 3), "rgb": np.random.rand(100, 3)}
    msg = ros2_numpy.msgify(PointCloud2, data)
    ```
 

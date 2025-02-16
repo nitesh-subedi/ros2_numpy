@@ -4,6 +4,9 @@ import array
 import sys
 import time
 from .registry import converts_from_numpy, converts_to_numpy
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 @converts_to_numpy(PointCloud2)
 def point_cloud2_to_array(msg):
@@ -56,14 +59,20 @@ def point_cloud2_to_array(msg):
 
 
 @converts_from_numpy(PointCloud2)
-def array_to_point_cloud2(np_array, frame_id='base_link'):
+def dict_to_point_cloud2(point_cloud_dict:dict, frame_id:str='base_link'):
     """
-    Convert a numpy array to a PointCloud2 message. The numpy array must have a "xyz" field
+    Convert a dict of numpy array to a PointCloud2 message. The dict must have a "xyz" field
     and can optionally have a "rgb" field and a "intensity" field.
     """
+    if "xyz" not in point_cloud_dict.keys():
+        raise ValueError("The input dictionary must have an 'xyz' field. Something like {'xyz': np.array([[1, 2, 3], [4, 5, 6]])}")
     # Check if the "rgb" field is present
-    rgb_flag = "rgb" in np_array.keys()
-    intensity_flag = "intensity" in np_array.keys()
+    rgb_flag = True if "rgb" in point_cloud_dict.keys() else False
+    intensity_flag = True if "intensity" in point_cloud_dict.keys() else False
+    if not rgb_flag:
+        logger.warning("The 'rgb' field is not present in the input dictionary. The 'rgb' field will be set to zero.")
+    if not intensity_flag:
+        logger.warning("The 'intensity' field is not present in the input dictionary. The 'intensity' field will be set to zero.")
 
     # Create the PointCloud2 message
     msg = PointCloud2()
@@ -72,7 +81,7 @@ def array_to_point_cloud2(np_array, frame_id='base_link'):
     msg.header.stamp.sec = int(current_time)
     msg.header.stamp.nanosec = int((current_time - msg.header.stamp.sec) * 1e9)
     msg.height = 1
-    msg.width = np_array["xyz"].shape[0]
+    msg.width = point_cloud_dict["xyz"].shape[0]
     msg.fields = [
         PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
         PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
@@ -86,7 +95,7 @@ def array_to_point_cloud2(np_array, frame_id='base_link'):
                           datatype=PointField.UINT16, count=1))
     msg.is_bigendian = sys.byteorder != 'little'
     # Check if message is dense
-    msg.is_dense = not np.isnan(np_array["xyz"]).any()
+    msg.is_dense = not np.isnan(point_cloud_dict["xyz"]).any()
 
     # Calculate the point_step and row_step
     if rgb_flag and intensity_flag:
@@ -104,19 +113,19 @@ def array_to_point_cloud2(np_array, frame_id='base_link'):
     # Here we create an array.array object using a memoryview, limiting copying and
     # increasing performance.
     if rgb_flag and intensity_flag:
-        memory_view = memoryview(np.hstack(np_array["xyz"].astype(np.float32).tobytes(
-        ), np_array["rgb"].astype(np.uint32).tobytes(), np_array["intensity"].astype(np.uint16).tobytes()))
+        memory_view = memoryview(np.hstack(point_cloud_dict["xyz"].astype(np.float32).tobytes(
+        ), point_cloud_dict["rgb"].astype(np.uint32).tobytes(), point_cloud_dict["intensity"].astype(np.uint16).tobytes()))
 
     if rgb_flag and not intensity_flag:
-        memory_view = memoryview(np.hstack((np_array["xyz"].astype(np.float32).tobytes(
-        ), np_array["rgb"].astype(np.uint32).tobytes())))
+        memory_view = memoryview(np.hstack((point_cloud_dict["xyz"].astype(np.float32).tobytes(
+        ), point_cloud_dict["rgb"].astype(np.uint32).tobytes())))
 
     if not rgb_flag and intensity_flag:
-        memory_view = memoryview(np.hstack(np_array["xyz"].astype(np.float32).tobytes(
-        ), np_array["intensity"].astype(np.uint16).tobytes()))
+        memory_view = memoryview(np.hstack(point_cloud_dict["xyz"].astype(np.float32).tobytes(
+        ), point_cloud_dict["intensity"].astype(np.uint16).tobytes()))
     
     if not rgb_flag and not intensity_flag:
-        memory_view = memoryview(np_array["xyz"].astype(np.float32).tobytes())
+        memory_view = memoryview(point_cloud_dict["xyz"].astype(np.float32).tobytes())
 
     if memory_view.nbytes > 0:
         array_bytes = memory_view.cast("B")
