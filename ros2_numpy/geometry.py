@@ -82,7 +82,7 @@ def numpy_to_transform(arr):
 
         return Transform(
             translation=Vector3(**dict(zip(['x', 'y', 'z'], trans))),
-            rotation=Quaternion(**dict(zip(['x', 'y', 'z', 'w'], quat)))
+            rotation=Quaternion(**dict(zip(['w', 'x', 'y', 'z'], quat)))
         )
     else:
         res = np.empty(shape, dtype=np.object_)
@@ -94,7 +94,7 @@ def numpy_to_transform(arr):
                         transformations.translation_from_matrix(arr[idx])))),
                 rotation=Quaternion(
                     **dict(
-                        zip(['x', 'y', 'z', 'w'],
+                        zip(['w', 'x', 'y', 'z'],
                         transformations.quaternion_from_matrix(arr[idx]))))
             )
 
